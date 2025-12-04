@@ -13,7 +13,7 @@ def main():
                 subsection = grid[y:y + 3, x:x + 3] # iterate "sliding" 3x3 subgrid across all positions
                 if subsection[1,1] != '@':
                     continue # skip if not centred on paper roll
-                if (subsection == '@').sum() <= 4: # <= 4 instead of < 4 to account for centre roll
+                if np.sum(subsection == '@') <= 4: # <= 4 instead of < 4 to account for centre roll
                     subsection[1,1] = '.' # also mutates original array
                     total += 1
                     removed = True
