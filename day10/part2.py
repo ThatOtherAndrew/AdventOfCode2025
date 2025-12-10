@@ -1,63 +1,70 @@
+from itertools import chain
+
+
 class Machine:
-    def __init__(self, state: list[int], buttons: list[tuple[int, ...]], presses: int):
+    def __init__(self, state: list[int], buttons: list[tuple[int, ...]]):
         self.state = state
-        # prioritise buttons which can increment the most
-        self.buttons = sorted(buttons, key=len, reverse=True)
-        self.presses = presses
-        self.is_invalid = min(state) < 0 or not self.buttons
+        self.buttons = buttons
+        self.is_solved = not any(state)
+
+    def __repr__(self) -> str:
+        return repr(self.state)
 
     @staticmethod
     def from_manual_line(line: str) -> Machine:
         parts = line.split()
         state = list(map(int, parts[-1][1:-1].split(',')))
         buttons = [tuple(map(int, part[1:-1].split(','))) for part in parts[1:-1]]
-        return Machine(state, buttons, 0)
+        return Machine(state, buttons)
 
-    def press(self, button: tuple[int, ...], presses: int) -> Machine:
-        new_state = self.state.copy()
-        for i in button:
-            new_state[i] -= presses
+    def get_moves(self, skip_hashes: set[int]) -> list[Machine]:
+        machines = []
 
-        # remove buttons which cause invalid states
-        buttons = [b for b in self.buttons if all(self.state[i] > 0 for i in b)]
+        # get the index affected by the least buttons (to keep the state tree narrow)
+        _, target = min((sum(i in b for b in self.buttons), i) for i, n in enumerate(self.state) if n)
 
-        return Machine(new_state, buttons, self.presses + presses)
+        for button in self.buttons:
+            if target not in button:
+                continue
 
-    def max_presses(self, button: tuple[int, ...]) -> int:
-        return min(self.state[i] for i in button)
+            new_state = self.state.copy()
+            for i in button:
+                new_state[i] -= 1
+            if any(n < 0 for n in new_state):
+                continue  # skip invalid state
 
-    def solve(self) -> int | None:
-        machine = self
-        if machine.is_invalid:
-            return None
+            # use hashes to avoid moves which repeat states
+            state_hash = hash(tuple(new_state))
+            if state_hash in skip_hashes:
+                continue
+            skip_hashes.add(state_hash)
 
-        # max out all required presses
-        changed = True
-        while changed:
-            changed = False
-            for i in range(len(machine.state)):
-                relevant_buttons = [b for b in machine.buttons if i in b]
-                if len(relevant_buttons) == 1:  # no other button can increment index i, therefore this must be pressed
-                    new_machine = machine.press(relevant_buttons[0], machine.state[i])
-                    if not new_machine.is_invalid:
-                        machine = new_machine
-                        changed = True
+            machines.append(Machine(new_state, self.buttons))
 
-        # guess and backtrack
-        for presses in range(machine.max_presses(machine.buttons[0]), 0, -1):
-            new_machine = Machine(machine.state.copy(), machine.buttons[1:], machine.presses)
-            new_machine.press(machine.buttons[0], presses)
-            solution = new_machine.solve()
-            if solution is not None:
-                return solution
+        return machines
 
-        return None
+    def solve(self) -> int:
+        steps = 0
+        machines = [self]
+        skip_hashes = set()
+        while not any(machine.is_solved for machine in machines):
+            steps += 1
+            print(f' -> Step {steps} (states: {len(machines)})', end=' ' * 9 + '\r')
+            machines = list(chain.from_iterable(machine.get_moves(skip_hashes) for machine in machines))
+        return steps
 
 
 def main():
-    machines = list(map(Machine.from_manual_line, open('input.txt').readlines()))
-    for machine in machines:
-        print(machine.solve())
+    machines = list(map(Machine.from_manual_line, open('.input.txt').readlines()))
+
+    total = 0
+    for i, machine in enumerate(machines):
+        print(f'{i + 1}/{len(machines)}:', machine.state, [" ".join(map(str, b)).join('()') for b in machine.buttons])
+        solution = machine.solve()
+        print('\nSolved:', solution, end='\n\n')
+        total += solution
+
+    print(total)
 
 
 if __name__ == '__main__':
