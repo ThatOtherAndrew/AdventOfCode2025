@@ -13,14 +13,14 @@ def rectangles_intersect(r1: Rect, r2: Rect) -> bool:
 
     # test if x- and y-ranges intersect
     return (
-        max(r1_x_lower, r2_x_lower) <= min(r1_x_upper, r2_x_upper)  # x-ranges
-        and max(r1_y_lower, r2_y_lower) <= min(r1_y_upper, r2_y_upper)  # y-ranges
+        r1_x_lower <= r2_x_upper and r2_x_lower <= r1_x_upper  # x-ranges
+        and r1_y_lower <= r2_y_upper and r2_y_lower <= r1_y_upper  # y-ranges
     )
 
 
 def main():
     # noinspection PyTypeChecker
-    tiles: list[Point] = [tuple(map(int, line.split(','))) for line in open('.input.txt')]
+    tiles: list[Point] = [tuple(map(int, line.split(','))) for line in open('input.txt')]
 
     # firstly, let's find all the turns needed to trace the polygon, and the inner and outer cells
     turns: list[int] = []
@@ -45,14 +45,13 @@ def main():
     wrapping_corners: list[Point] = [cell[turn] for turn, cell in zip(turns, cells)]
     wrapping_sides: list[Rect] = list(zip(wrapping_corners, wrapping_corners[1:] + wrapping_corners[:1]))
 
-    # lastly, get all rectangle sizes just like part 1, but filter out ones which intersect any wrapping sides
-    sizes = [
-        (abs(a[0] - b[0]) + 1) * (abs(a[1] - b[1]) + 1)
-        for a, b in combinations(tiles, 2)
-        if not any(rectangles_intersect(side, (a, b)) for side in wrapping_sides)
-    ]
-
-    print(max(sizes))
+    # lastly, get all rectangle sizes just like part 1
+    # sort them by largest, and stop at the first one which doesn't intersect with the wrapping polygon
+    sizes = [((abs(a[0] - b[0]) + 1) * (abs(a[1] - b[1]) + 1), (a, b)) for a, b in combinations(tiles, 2)]
+    print(next(
+        size for size, rect in sorted(sizes, reverse=True)
+        if not any(rectangles_intersect(side, rect) for side in wrapping_sides)
+    ))
 
 
 if __name__ == '__main__':
