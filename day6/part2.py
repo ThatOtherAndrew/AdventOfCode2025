@@ -1,5 +1,5 @@
 def main():
-    raw_lines = open('.input.txt').readlines()
+    raw_lines = open('input.txt').readlines()
     total = 0
     buffer = []
 

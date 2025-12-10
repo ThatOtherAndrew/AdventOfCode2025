@@ -3,7 +3,7 @@ from collections import defaultdict
 import numpy as np
 
 def main():
-    grid = np.array([list(line.strip()) for line in open('.input.txt')])
+    grid = np.array([list(line.strip()) for line in open('input.txt')])
     # map beam positions (x/column value) to number of ways to get to that position
     beams: dict[int, int] = {np.where(grid == 'S')[1][0]: 1}
 

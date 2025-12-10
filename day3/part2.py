@@ -2,7 +2,7 @@ DIGITS = 12
 
 
 def main():
-    banks = [list(map(int, line.strip())) for line in open('.input.txt')]
+    banks = [list(map(int, line.strip())) for line in open('input.txt')]
     joltage_sum = 0
 
     # finally, my first actually intelligent puzzle solve
