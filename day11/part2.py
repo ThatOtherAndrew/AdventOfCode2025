@@ -1,5 +1,7 @@
+import math
 from collections import defaultdict
 from functools import cache
+from itertools import permutations, pairwise
 
 
 def main():
@@ -10,15 +12,21 @@ def main():
             graph[output].append(line[:3])
 
     @cache
-    def count_paths(root: str, node: str) -> int:
+    def count_paths(root: str, node: str, via: tuple[int] = ()) -> int:
+        if via:
+            return sum(
+                math.prod(
+                    count_paths(*pair)
+                    for pair in pairwise((root, *order, node))
+                )
+                for order in permutations(via)
+            )
+
         if node == root:
             return 1
         return sum(count_paths(root, source) for source in graph[node])
 
-    print(
-        count_paths('svr', 'dac') * count_paths('dac', 'fft') * count_paths('fft', 'out')
-        + count_paths('svr', 'fft') * count_paths('fft', 'dac') * count_paths('dac', 'out')
-    )
+    print(count_paths('svr', 'out', via=('fft', 'dac')))
 
 
 if __name__ == '__main__':
