@@ -1,13 +1,21 @@
-import networkx as nx
+from collections import defaultdict
+from functools import cache
 
 
 def main():
-    graph = nx.DiGraph()
-    for line in open('input.txt'):
-        node, outputs = line.split(': ')
-        graph.add_edges_from([(node, output) for output in outputs.split()])
+    # reverse graph of outputs -> inputs
+    graph = defaultdict(list)
+    for line in open('.input.txt'):
+        for output in line[5:].split():
+            graph[output].append(line[:3])
 
-    print(len(list(nx.all_simple_paths(graph, source='you', target='out'))))
+    @cache
+    def count_paths_to(node: str) -> int:
+        if node == 'you':
+            return 1
+        return sum(map(count_paths_to, graph[node]))
+
+    print(count_paths_to('out'))
 
 
 if __name__ == '__main__':
