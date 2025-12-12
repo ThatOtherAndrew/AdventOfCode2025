@@ -1,3 +1,4 @@
+from concurrent.futures.process import ProcessPoolExecutor
 from itertools import chain
 
 
@@ -43,28 +44,27 @@ class Machine:
 
         return machines
 
-    def solve(self) -> int:
+    def solve(self, instance: int) -> int:
+        print(f'[{instance}] Solving', self.state, *[" ".join(map(str, b)).join('()') for b in self.buttons])
+
         steps = 0
         machines = [self]
         skip_hashes = set()
         while not any(machine.is_solved for machine in machines):
             steps += 1
-            print(f' -> Step {steps} (states: {len(machines)})', end=' ' * 9 + '\r')
+            # print(f' -> Step {steps} (states: {len(machines)})', end=' ' * 9 + '\r')
             machines = list(chain.from_iterable(machine.get_moves(skip_hashes) for machine in machines))
+
+        print(f'[{instance}] Solved:', steps)
+        with open(f'solutions/{instance}.txt', 'w') as file:
+            file.write(str(steps))
         return steps
 
 
 def main():
     machines = list(map(Machine.from_manual_line, open('.input.txt').readlines()))
-
-    total = 0
-    for i, machine in enumerate(machines):
-        print(f'{i + 1}/{len(machines)}:', machine.state, [" ".join(map(str, b)).join('()') for b in machine.buttons])
-        solution = machine.solve()
-        print('\nSolved:', solution, end='\n\n')
-        total += solution
-
-    print(total)
+    with ProcessPoolExecutor() as executor:
+        executor.map(Machine.solve, machines, range(len(machines)))
 
 
 if __name__ == '__main__':
