@@ -1,70 +1,45 @@
-from concurrent.futures.process import ProcessPoolExecutor
-from itertools import chain
+from collections import defaultdict
+from collections.abc import Generator, Iterable
+from functools import cache
+from itertools import islice
 
 
-class Machine:
-    def __init__(self, state: list[int], buttons: list[tuple[int, ...]]):
-        self.state = state
-        self.buttons = buttons
-        self.is_solved = not any(state)
+@cache
+def coin_change(target: int, coins: tuple[int], max_coins: int) -> list[list[int]]:
+    if target == max_coins == 0:
+        return [[0 for _ in coins]]
+    if not coins:
+        return []
 
-    def __repr__(self) -> str:
-        return repr(self.state)
+    splits = []
+    for count in range(min(target // coins[0], max_coins) + 1):
+        for counts in coin_change(target - count * coins[0], coins[1:], max_coins - count):
+            splits.append([count, *counts])
+    return splits
 
-    @staticmethod
-    def from_manual_line(line: str) -> Machine:
-        parts = line.split()
-        state = list(map(int, parts[-1][1:-1].split(',')))
-        buttons = [tuple(map(int, part[1:-1].split(','))) for part in parts[1:-1]]
-        return Machine(state, buttons)
 
-    def get_moves(self, skip_hashes: set[int]) -> list[Machine]:
-        machines = []
-
-        # get the index affected by the least buttons (to keep the state tree narrow)
-        _, target = min((sum(i in b for b in self.buttons), i) for i, n in enumerate(self.state) if n)
-
-        for button in self.buttons:
-            if target not in button:
-                continue
-
-            new_state = self.state.copy()
-            for i in button:
-                new_state[i] -= 1
-            if any(n < 0 for n in new_state):
-                continue  # skip invalid state
-
-            # use hashes to avoid moves which repeat states
-            state_hash = hash(tuple(new_state))
-            if state_hash in skip_hashes:
-                continue
-            skip_hashes.add(state_hash)
-
-            machines.append(Machine(new_state, self.buttons))
-
-        return machines
-
-    def solve(self, instance: int) -> int:
-        print(f'[{instance}] Solving', self.state, *[" ".join(map(str, b)).join('()') for b in self.buttons])
-
-        steps = 0
-        machines = [self]
-        skip_hashes = set()
-        while not any(machine.is_solved for machine in machines):
-            steps += 1
-            # print(f' -> Step {steps} (states: {len(machines)})', end=' ' * 9 + '\r')
-            machines = list(chain.from_iterable(machine.get_moves(skip_hashes) for machine in machines))
-
-        print(f'[{instance}] Solved:', steps)
-        with open(f'solutions/{instance}.txt', 'w') as file:
-            file.write(str(steps))
-        return steps
+def sorted_coin_change(target: int, coins: Iterable[int]) -> Generator[list[int]]:
+    sorted_coins = tuple(sorted(coins, reverse=True))
+    for max_coins in range(target // min(sorted_coins) + 1):
+        # print(str(max_coins), end='\r')
+        yield from coin_change(target, sorted_coins, max_coins)
 
 
 def main():
-    machines = list(map(Machine.from_manual_line, open('.input.txt').readlines()))
-    with ProcessPoolExecutor() as executor:
-        executor.map(Machine.solve, machines, range(len(machines)))
+    machines: list[tuple[list[int], dict[int, list[tuple[int, ...]]]]] = []
+    for line in open('.input.txt'):
+        *buttons, state = [list(map(int, part[1:-1].split(','))) for part in line.split()[1:]]
+        buttons_dict = defaultdict(list)
+        for button in buttons:
+            buttons_dict[len(button)].append(button)
+        machines.append((state, buttons_dict))
+
+    for state, buttons in machines:
+        print(
+            sum(state),
+            tuple(buttons.keys()),
+            [*islice(sorted_coin_change(sum(state), buttons.keys()), 100)]
+        )
 
 
 if __name__ == '__main__':
