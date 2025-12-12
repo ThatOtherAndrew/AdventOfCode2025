@@ -2,12 +2,14 @@ import re
 
 
 def main():
-    *pieces, all_regions = open('.input.txt').read().split('\n\n')
-    areas = [piece.count('#') for piece in pieces]
-    regions = [tuple(map(int, re.findall(r'\d+', line))) for line in all_regions.splitlines()]
+    regions = [
+        tuple(map(int, re.findall(r'\d+', line)))
+        for line in open('.input.txt').read().rsplit('\n\n', 1)[1].splitlines()
+    ]
+
     print(sum(
-        1 for r in regions
-        if r[0] * r[1] > sum(areas[i] * n for i, n in enumerate(r[2:]))
+        x * y > sum(n) * 7
+        for x, y, *n in regions
     ))
 
 
