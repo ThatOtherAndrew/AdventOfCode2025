@@ -17,7 +17,7 @@ def count_presses(values, solution, free_symbols):
 def main():
     total_presses = 0
 
-    for i, line in enumerate(open('.input.txt')):
+    for i, line in enumerate(open('input.txt')):
         *buttons, target = [tuple(map(int, part[1:-1].split(','))) for part in line.split()[1:]]
         print(f'[{i + 1}] Solving {target}: [{"] [".join(" ".join(map(str, b)) for b in buttons)}]')
 
