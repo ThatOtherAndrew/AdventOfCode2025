@@ -1,8 +1,17 @@
 import math
+from concurrent.futures.process import ProcessPoolExecutor
+from functools import partial
 from itertools import product
 
 from sympy import symbols, linsolve, Tuple, solve
 from tqdm import tqdm
+
+
+def count_presses(values, solution, free_symbols):
+    substituted = solution.subs(zip(free_symbols, values), simultaneous=True)
+    if all(x >= 0 and x.is_integer for x in substituted):
+        return sum(substituted)
+    return float('inf')
 
 
 def main():
@@ -25,7 +34,6 @@ def main():
             symbol: range(max(target[i] for i in buttons[solution.index(symbol)]) + 1)
             for symbol in solution.free_symbols
         }
-        search_space = list(product(*ranges.values()))
         for part in solution:
             if len(part.free_symbols) == 1 and not part.is_symbol:
                 symbol = next(iter(part.free_symbols))
@@ -40,12 +48,12 @@ def main():
                     print(symbol, '<=', threshold)
 
         # find the minimum presses out of the valid solutions in the search space
-        min_presses = float('inf')
-        for values in tqdm(search_space):
-            substituted = solution.subs(zip(ranges.keys(), values), simultaneous=True)
-            if all(x >= 0 and x.is_integer for x in substituted):
-                min_presses = min(min_presses, sum(substituted))
+        search_space = list(product(*ranges.values()))
+        with ProcessPoolExecutor() as executor:
+            worker = partial(count_presses, solution=solution, free_symbols=list(ranges.keys()))
+            min_presses = min(tqdm(executor.map(worker, search_space), total=len(search_space)))
 
+        # add solution to total
         total_presses += min_presses
         print('Solved:', min_presses, end='\n\n')
 
